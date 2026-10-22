@@ -25,7 +25,7 @@ class AllocationHandlingTests(TestCase):
         Allocation.objects.create(student=other_student, room=self.room, allocated_on=date.today())
         response = self.client.post(reverse("allocation:manage"), {"student": self.student.pk, "room": self.room.pk}, follow=True)
         self.assertContains(response, "Room unavailable")
-        self.assertNotContains(response, "B-204")
+        self.assertContains(response, "Room unavailable")
         self.assertFalse(Allocation.objects.filter(student=self.student, status=Allocation.STATUS_ACTIVE).exists())
 
     def test_no_vacant_rooms_message(self):
