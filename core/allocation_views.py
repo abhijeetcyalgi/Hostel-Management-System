@@ -4,7 +4,7 @@ from django.shortcuts import redirect, render
 from django.views.decorators.http import require_http_methods
 
 from .allocation_services import (
-    NoVacantRoomsError, RoomUnavailableError, allocate_student_to_room, get_vacant_rooms,
+    RoomUnavailableError, allocate_student_to_room, get_vacant_rooms,
 )
 from .models import Allocation, Room, Student, UserAccount
 from .roles import get_account, role_required
@@ -27,25 +27,29 @@ def manage_allocations(request):
         if student is None:
             messages.error(request, "Select a valid active student.")
         else:
-            try:
-                allocate_student_to_room(
-                    student=student, room_id=room_id,
-                    allocated_by=account,
-                )
-            except RoomUnavailableError:
+            # Wardens must not allocate students into another hostel by tampering
+            # with the submitted room ID.
+            room_is_in_scope = hostel is None or Room.objects.filter(pk=room_id, hostel=hostel).exists()
+            if not room_is_in_scope:
                 messages.error(request, "Room unavailable")
-            except NoVacantRoomsError:
-                messages.error(request, "No vacant rooms available")
-            except Exception as exc:
-                # Validation errors are user-facing; unexpected errors should not be hidden.
-                from django.core.exceptions import ValidationError
-                if isinstance(exc, ValidationError):
-                    messages.error(request, "; ".join(exc.messages))
-                else:
-                    raise
             else:
-                messages.success(request, "Room allocated successfully.")
-                return redirect("allocation:manage")
+                try:
+                    allocate_student_to_room(
+                        student=student, room_id=room_id,
+                        allocated_by=account,
+                    )
+                except RoomUnavailableError:
+                    messages.error(request, "Room unavailable")
+                except Exception as exc:
+                    # Validation errors are user-facing; unexpected errors should not be hidden.
+                    from django.core.exceptions import ValidationError
+                    if isinstance(exc, ValidationError):
+                        messages.error(request, "; ".join(exc.messages))
+                    else:
+                        raise
+                else:
+                    messages.success(request, "Room allocated successfully.")
+                    return redirect("allocation:manage")
 
         # Recompute after every POST so the displayed vacancy list is current.
         vacant_rooms = get_vacant_rooms(hostel=hostel)
