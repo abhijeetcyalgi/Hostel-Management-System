@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}My Room{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">My Room</h1>
+{% if allocation %}
+<div class="card"><div class="card-body">
+  <h2 class="h5">{{ allocation.room.hostel.name }} — {{ allocation.room.room_no }}</h2>
+  <p class="mb-1">Block: {{ allocation.room.block|default:"Not specified" }}</p>
+  <p class="mb-1">Allocated on: {{ allocation.allocated_on }}</p>
+  <p class="mb-0">Room occupancy: {{ allocation.room.occupancy }} / {{ allocation.room.capacity }}</p>
+</div></div>
+{% else %}
+<div class="alert alert-info" role="status">You do not currently have a room allocation.</div>
+{% endif %}
+{% endblock %}
